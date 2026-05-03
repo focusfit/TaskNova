@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>TaskNova – Ultimate</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#eef5f9;
+  --card:#ffffff;
+  --text:#1c2b36;
+  --muted:#6b7c87;
+  --accent:#4f8ca3;
+  --accent-2:#6aa6c1;
+  --sidebar:#2f5d73;
+  --border:#e3ecf2;
+}
+
+body.dark{
+  --bg:#0f1720;
+  --card:#1e2a35;
+  --text:#e6edf3;
+  --muted:#9fb2bf;
+  --accent:#6aa6c1;
+  --accent-2:#8bc3da;
+  --sidebar:#15222b;
+  --border:#243341;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,Arial,system-ui;
+  background:linear-gradient(180deg,var(--bg),#dde7ee);
+  color:var(--text);
+}
+
+/* Sidebar */
+#sidebar{
+  width:230px;
+  height:100vh;
+  background:var(--sidebar);
+  color:#fff;
+  position:fixed;
+  padding:20px;
+}
+#sidebar h2{margin:0 0 10px}
+.nav-btn{
+  width:100%;
+  margin-top:10px;
+  padding:10px 12px;
+  border:none;
+  border-radius:12px;
+  background:var(--accent);
+  color:#fff;
+  cursor:pointer;
+  transition:.2s;
+  text-align:left;
+}
+.nav-btn:hover{transform:translateY(-1px)}
+.nav-btn.active{background:rgba(0,0,0,.2)}
+.meta{margin-top:20px;font-size:13px;opacity:.9}
+
+/* Main */
+#main{
+  margin-left:250px;
+  padding:22px;
+}
+
+/* Pages */
+.page{display:none; opacity:0; transform:translateY(10px); transition:.25s}
+.page.active{display:block; opacity:1; transform:none}
+
+/* Layout */
+.row{display:flex; gap:16px; flex-wrap:wrap}
+.col{flex:1; min-width:260px}
+
+/* Cards */
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  box-shadow:0 10px 24px rgba(0,0,0,.06);
+  transition:.2s;
+}
+.card:hover{transform:translateY(-3px)}
+
+/* Stats */
+.stat{
+  text-align:center;
+}
+.stat .big{font-size:26px; font-weight:700}
+.stat .label{font-size:12px; color:var(--muted)}
+
+/* Inputs & buttons */
+.inputRow{display:flex; gap:8px; margin-top:8px}
+input{
+  flex:1; padding:10px;
+  border-radius:10px; border:1px solid var(--border);
+  background:transparent; color:var(--text)
+}
+button{
+  padding:10px 12px; border:none; border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#fff; cursor:pointer; transition:.15s
+}
+button:hover{transform:scale(1.04)}
+button.ghost{
+  background:transparent; color:var(--text);
+  border:1px solid var(--border)
+}
+
+/* Tasks */
+.task{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px; border-radius:12px; margin-top:8px;
+  background:rgba(79,140,163,.08);
+  animation:fadeIn .25s ease;
+}
+.task small{color:var(--muted)}
+@keyframes fadeIn{from{opacity:0; transform:translateX(-8px)} to{opacity:1; transform:none}}
+
+/* Timer */
+.timerBox{text-align:center}
+.progress{
+  width:180px; height:180px; margin:16px auto; position:relative;
+}
+.progress svg{transform:rotate(-90deg)}
+.progress circle{fill:none; stroke-width:10; stroke:var(--border)}
+.progress .bar{
+  stroke:var(--accent);
+  stroke-dasharray:565;
+  stroke-dashoffset:565;
+  transition:.25s linear;
+}
+.timer-text{
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  font-size:28px; font-weight:700;
+}
+.timer-mode{font-size:12px; color:var(--muted)}
+
+/* Calendar */
+.cal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:10px;
+}
+.cal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:6px;
+}
+.day{
+  padding:10px; border-radius:12px; text-align:left;
+  border:1px solid var(--border);
+  min-height:70px; cursor:pointer;
+  display:flex; flex-direction:column; gap:4px;
+}
+.day:hover{outline:2px solid var(--accent)}
+.day .dnum{font-weight:700; font-size:12px}
+.day .dot{
+  width:6px; height:6px; border-radius:50%; background:var(--accent);
+  display:inline-block; margin-right:4px;
+}
+.day.muted{opacity:.35}
+.day.today{outline:2px dashed var(--accent)}
+.events{
+  margin-top:8px; font-size:12px; color:var(--muted);
+  max-height:38px; overflow:hidden;
+}
+
+/* Docs */
+.file{display:flex; justify-content:space-between; margin-top:6px; padding:8px; border-radius:10px; background:rgba(79,140,163,.08)}
+
+/* Toast */
+#toast{
+  position:fixed; bottom:18px; right:18px;
+  background:var(--accent); color:#fff;
+  padding:10px 14px; border-radius:10px;
+  opacity:0; transform:translateY(10px); transition:.25s;
+}
+
+/* Responsive */
+@media(max-width:900px){
+  #sidebar{position:relative; width:100%; height:auto}
+  #main{margin-left:0}
+}
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+  <h2>TaskNova</h2>
+
+  <button class="nav-btn active" onclick="go('dashboard',this)">Dashboard</button>
+  <button class="nav-btn" onclick="go('calendar',this)">Calendar</button>
+  <button class="nav-btn" onclick="go('docs',this)">Documents</button>
+  <button class="nav-btn ghost" onclick="toggleTheme()">🌗 Theme</button>
+
+  <div class="meta">
+    <div id="level"></div>
+    <div id="xp"></div>
+  </div>
+</div>
+
+<div id="main">
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="page active">
+
+  <h1>Dashboard</h1>
+
+  <div class="row">
+    <div class="card col stat">
+      <div class="big" id="todayH">0h</div>
+      <div class="label">Today</div>
+    </div>
+    <div class="card col stat">
+      <div class="big" id="tasksDone">0/0</div>
+      <div class="label">Tasks</div>
+    </div>
+    <div class="card col stat">
+      <div class="big" id="prod">0%</div>
+      <div class="label">Productivity</div>
+    </div>
+    <div class="card col stat">
+      <div class="big" id="streak">🔥 0</div>
+      <div class="label">Streak</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+
+      <div class="card">
+        <h3>Tasks</h3>
+        <div class="inputRow">
+          <input id="taskInput" placeholder="Add task...">
+          <button onclick="addTask()">Add</button>
+        </div>
+        <div id="taskList"></div>
+      </div>
+
+      <div class="card">
+        <h3>Weekly Activity</h3>
+        <canvas id="chart"></canvas>
+        <div id="insight" style="margin-top:6px; font-size:12px; color:var(--muted)"></div>
+      </div>
+
+    </div>
+
+    <div class="col">
+      <div class="card timerBox">
+        <h3 id="modeLabel">Focus</h3>
+        <div class="timer-mode" id="modeSub">25 min session</div>
+
+        <div class="progress">
+          <svg width="180" height="180">
+            <circle cx="90" cy="90" r="90"></circle>
+            <circle cx="90" cy="90" r="90" class="bar" id="bar"></circle>
+          </svg>
+          <div class="timer-text" id="time">25:00</div>
+        </div>
+
+        <div>
+          <button onclick="setTime(1500)">25</button>
+          <button onclick="setTime(2700)">45</button>
+          <button onclick="setTime(3600)">60</button>
+        </div>
+
+        <div>
+          <button onclick="start()">Start</button>
+          <button onclick="pause()">Pause</button>
+          <button onclick="finish()">Finish</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CALENDAR -->
+<div id="calendar" class="page">
+
+  <h1>Calendar</h1>
+
+  <div class="card">
+    <div class="cal-header">
+      <button onclick="prevMonth()">◀</button>
+      <div id="monthLabel"></div>
+      <button onclick="nextMonth()">▶</button>
+    </div>
+
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="card">
+    <h3>Events</h3>
+    <div class="inputRow">
+      <input id="eventInput" placeholder="Add event for selected day">
+      <button onclick="addEvent()">Add</button>
+    </div>
+    <div id="eventList"></div>
+  </div>
+
+</div>
+
+<!-- DOCS -->
+<div id="docs" class="page">
+
+  <h1>Documents</h1>
+
+  <div class="card">
+    <div class="inputRow">
+      <input type="file" id="fileInput">
+      <button onclick="upload()">Upload</button>
+    </div>
+    <div id="fileList"></div>
+  </div>
+
+</div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ---------- Navigation ---------- */
+function go(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ---------- Theme ---------- */
+function toggleTheme(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem('theme', document.body.classList.contains('dark'));
+}
+if(localStorage.getItem('theme')==='true') document.body.classList.add('dark');
+
+/* ---------- Storage ---------- */
+let sessions = JSON.parse(localStorage.getItem('sessions')||'{}'); // {dateStr: hours}
+let xp       = JSON.parse(localStorage.getItem('xp')||'0');
+let tasks    = JSON.parse(localStorage.getItem('tasks')||'[]');
+let done     = JSON.parse(localStorage.getItem('done')||'0');
+let streak   = JSON.parse(localStorage.getItem('streak')||'0');
+let lastDay  = localStorage.getItem('lastDay');
+let events   = JSON.parse(localStorage.getItem('events')||'{}'); // {dateStr: [..]}
+let files    = JSON.parse(localStorage.getItem('files')||'[]');
+
+function save(){
+  localStorage.setItem('sessions', JSON.stringify(sessions));
+  localStorage.setItem('xp', JSON.stringify(xp));
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+  localStorage.setItem('done', JSON.stringify(done));
+  localStorage.setItem('streak', JSON.stringify(streak));
+  localStorage.setItem('lastDay', lastDay||'');
+  localStorage.setItem('events', JSON.stringify(events));
+  localStorage.setItem('files', JSON.stringify(files));
+}
+
+/* ---------- Toast ---------- */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.opacity=1; t.style.transform='translateY(0)';
+  setTimeout(()=>{t.style.opacity=0; t.style.transform='translateY(10px)';},1800);
+}
+
+/* ---------- Tasks ---------- */
+function addTask(){
+  const v=document.getElementById('taskInput').value.trim();
+  if(!v) return;
+  tasks.push({text:v, created:Date.now()});
+  document.getElementById('taskInput').value='';
+  save(); renderTasks();
+  toast('Task added');
+}
+function renderTasks(){
+  const list=document.getElementById('taskList');
+  list.innerHTML='';
+  tasks.forEach((t,i)=>{
+    const div=document.createElement('div');
+    div.className='task';
+    div.innerHTML = `
+      <div>${t.text}<br><small>${new Date(t.created).toLocaleString()}</small></div>
+      <div>
+        <button onclick="complete(${i})">✔</button>
+        <button class="ghost" onclick="removeTask(${i})">✕</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+function complete(i){
+  tasks.splice(i,1);
+  done++; xp+=5;
+  save(); renderTasks(); updateUI();
+  toast('Task completed +5 XP');
+}
+function removeTask(i){
+  tasks.splice(i,1);
+  save(); renderTasks(); updateUI();
+  toast('Task removed');
+}
+
+/* ---------- Timer (focus/break) ---------- */
+let selected=1500, time=1500, timer=null, mode='focus', startStamp=0;
+
+function setTime(t){
+  selected=t; time=t; updateTimerUI();
+}
+function start(){
+  if(timer) return;
+  startStamp=Date.now();
+  timer=setInterval(()=>{
+    if(time>0){ time--; updateTimerUI(); }
+    else { switchMode(); }
+  },1000);
+  toast('Focus started');
+}
+function pause(){
+  clearInterval(timer); timer=null;
+  toast('Paused');
+}
+function finish(){
+  clearInterval(timer); timer=null;
+  // reward only if >=80% completed
+  const elapsed=(Date.now()-startStamp)/1000;
+  if(elapsed>=selected*0.8) rewardSession();
+  resetTimer();
+}
+function switchMode(){
+  if(mode==='focus'){
+    rewardSession();
+    mode='break'; time=300;
+    toast('Break time ☕');
+  }else{
+    mode='focus'; time=selected;
+    toast('Back to focus 💪');
+  }
+  updateTimerUI();
+}
+function rewardSession(){
+  const hours = selected/3600;
+  const today = new Date().toDateString();
+  if(!sessions[today]) sessions[today]=0;
+  sessions[today]=Math.min(8, sessions[today]+hours);
+  xp += Math.round(hours*20);
+
+  // streak
+  if(lastDay){
+    const diff=(new Date(today)-new Date(lastDay))/(1000*60*60*24);
+    if(diff===1) streak++;
+    else if(diff>1) streak=1;
+  } else streak=1;
+  lastDay=today;
+
+  save(); updateUI();
+}
+function resetTimer(){
+  mode='focus'; time=selected; updateTimerUI();
+}
+function updateTimerUI(){
+  const m=Math.floor(time/60), s=time%60;
+  document.getElementById('time').textContent = m+':' + (s<10?'0'+s:s);
+  const progress=(time/selected)*565;
+  document.getElementById('bar').style.strokeDashoffset=progress;
+  document.getElementById('modeLabel').textContent = mode==='focus'?'Focus':'Break';
+  document.getElementById('modeSub').textContent = mode==='focus'
+    ? (selected/60)+' min session' : '5 min break';
+}
+
+/* ---------- Chart (real data) ---------- */
+function weekData(){
+  const arr=[0,0,0,0,0,0,0];
+  for(const k in sessions){
+    const d=new Date(k);
+    arr[d.getDay()] = sessions[k];
+  }
+  return arr;
+}
+const chart=new Chart(document.getElementById('chart'),{
+  type:'bar',
+  data:{
+    labels:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    datasets:[{
+      data:weekData(),
+      backgroundColor:['#7c7cf4','#f06292','#4fc3a1','#ffb74d','#90caf9','#a5d6a7','#ce93d8'],
+      borderRadius:10
+    }]
+  },
+  options:{
+    animation:{duration:600},
+    plugins:{legend:{display:false}},
+    scales:{y:{display:false}}
+  }
+});
+
+/* ---------- UI ---------- */
+function updateUI(){
+  const todayStr=new Date().toDateString();
+  const todayH = sessions[todayStr]||0;
+
+  document.getElementById('todayH').textContent = todayH.toFixed(1)+'h';
+  document.getElementById('tasksDone').textContent = `${done}/${done+tasks.length}`;
+  const total=done+tasks.length;
+  document.getElementById('prod').textContent = (total?Math.round(done/total*100):0)+'%';
+  document.getElementById('streak').textContent = '🔥 '+streak;
+
+  document.getElementById('xp').textContent = xp+' XP';
+  document.getElementById('level').textContent = 'Level '+Math.floor(xp/50);
+
+  const w=weekData();
+  chart.data.datasets[0].data=w;
+  chart.update();
+
+  const sum=w.reduce((a,b)=>a+b,0);
+  const avg=(sum/7)||0;
+  document.getElementById('insight').textContent =
+    sum>0 ? `This week: ${sum.toFixed(1)}h (avg ${avg.toFixed(1)}h/day)` : 'No data yet';
+}
+
+/* ---------- Calendar (functional) ---------- */
+let viewYear=(new Date()).getFullYear();
+let viewMonth=(new Date()).getMonth(); // 0-11
+let selectedDateStr = new Date().toDateString();
+
+function monthName(y,m){
+  return new Date(y,m,1).toLocaleString(undefined,{month:'long',year:'numeric'});
+}
+function buildCalendar(){
+  const grid=document.getElementById('calGrid');
+  const label=document.getElementById('monthLabel');
+  grid.innerHTML='';
+  label.textContent = monthName(viewYear,viewMonth);
+
+  const first=new Date(viewYear,viewMonth,1);
+  const startDay=first.getDay();
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+  const todayStr=new Date().toDateString();
+
+  // leading blanks
+  for(let i=0;i<startDay;i++){
+    const d=document.createElement('div');
+    d.className='day muted';
+    grid.appendChild(d);
+  }
+
+  for(let day=1; day<=daysInMonth; day++){
+    const dEl=document.createElement('div');
+    dEl.className='day';
+    const dateObj=new Date(viewYear,viewMonth,day);
+    const dStr=dateObj.toDateString();
+
+    if(dStr===todayStr) dEl.classList.add('today');
+
+    dEl.innerHTML = `<div class="dnum">${day}</div>
+      <div class="events">
+        ${(events[dStr]||[]).slice(0,3).map(e=>`<span class="dot"></span>${e}<br>`).join('')}
+      </div>`;
+
+    dEl.onclick = ()=>{
+      selectedDateStr=dStr;
+      loadEvents();
+      toast(`Selected ${dStr}`);
+    };
+    grid.appendChild(dEl);
+  }
+}
+
+function prevMonth(){
+  viewMonth--;
+  if(viewMonth<0){viewMonth=11; viewYear--;}
+  buildCalendar();
+}
+function nextMonth(){
+  viewMonth++;
+  if(viewMonth>11){viewMonth=0; viewYear++;}
+  buildCalendar();
+}
+
+function addEvent(){
+  const val=document.getElementById('eventInput').value.trim();
+  if(!val) return;
+  if(!events[selectedDateStr]) events[selectedDateStr]=[];
+  events[selectedDateStr].push(val);
+  document.getElementById('eventInput').value='';
+  save(); buildCalendar(); loadEvents();
+  toast('Event added');
+}
+function loadEvents(){
+  const list=document.getElementById('eventList');
+  const arr=events[selectedDateStr]||[];
+  list.innerHTML = arr.map((e,i)=>`
+    <div class="task">
+      <div>${e}</div>
+      <button onclick="removeEvent('${selectedDateStr}',${i})">✕</button>
+    </div>`).join('');
+}
+function removeEvent(dateStr,i){
+  events[dateStr].splice(i,1);
+  save(); buildCalendar(); loadEvents();
+  toast('Event removed');
+}
+
+/* ---------- Docs ---------- */
+function upload(){
+  const f=document.getElementById('fileInput').files[0];
+  if(!f) return;
+  files.push({name:f.name, ts:Date.now()});
+  save(); renderFiles();
+  toast('Uploaded');
+}
+function renderFiles(){
+  const list=document.getElementById('fileList');
+  list.innerHTML = files.map((f,i)=>`
+    <div class="file">
+      <div>${f.name}<br><small>${new Date(f.ts).toLocaleString()}</small></div>
+      <button onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+function removeFile(i){
+  files.splice(i,1);
+  save(); renderFiles();
+  toast('Deleted');
+}
+
+/* ---------- Init ---------- */
+renderTasks();
+renderFiles();
+buildCalendar();
+loadEvents();
+updateTimerUI();
+updateUI();
+</script>
+
+</body>
+</html>
